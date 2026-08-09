@@ -1,0 +1,10 @@
+# Ignora a pasta do ambiente virtual
+venv/
+
+# Ignora o arquivo de segredos
+.env
+
+venv/
+.env
+__pycache__/
+*.json
