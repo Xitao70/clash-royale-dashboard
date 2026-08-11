@@ -11,11 +11,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# Descobre o IP do servidor onde o app está rodando
+# Descobre o IPv4 público exato e válido do servidor na nuvem
 try:
-    server_ip = requests.get('https://api.ipify.org', timeout=5).text
+    server_ip = requests.get('https://v4.ident.me', timeout=5).text.strip()
 except Exception:
-    server_ip = "Indisponível"
+    try:
+        server_ip = requests.get('https://api4.ipify.org', timeout=5).text.strip()
+    except Exception:
+        server_ip = "Indisponível"
 
 # Carrega a chave de API (.env para local, Secrets para a nuvem)
 load_dotenv()
@@ -25,8 +28,8 @@ API_KEY = os.getenv('CLASH_ROYALE_API_KEY')
 st.title("👑 Clash Royale - Dashboard de Jogador")
 st.markdown("Insira a **Tag do Jogador** para visualizar o perfil, tempo de conta e estatísticas.")
 
-# Exibe o IP do servidor em destaque para cadastrar na Supercell
-st.info(f"🌐 **IP do seu servidor:** `{server_ip}` — *Cadastre este IP no portal de desenvolvedores da Supercell.*")
+# Exibe o IPv4 verificado para cadastrar no portal da Supercell
+st.info(f"🌐 **IPv4 do seu servidor:** `{server_ip}` — *Cadastre este IP no portal de desenvolvedores da Supercell.*")
 
 # Campo de busca no topo
 player_tag_input = st.text_input("Tag do Jogador:", value="#P9RV222GG", help="Exemplo: #P9RV222GG ou P9RV222GG")
