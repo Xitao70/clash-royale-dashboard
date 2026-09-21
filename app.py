@@ -3,7 +3,6 @@ from urllib.parse import quote
 
 import requests
 import streamlit as st
-import pandas as pd
 from dotenv import load_dotenv
 
 
@@ -12,8 +11,8 @@ from dotenv import load_dotenv
 # ============================================================
 
 st.set_page_config(
-    page_title="Clash Royale Dashboard",
-    page_icon="👑",
+    page_title="Jogador vs Jogador",
+    page_icon="⚔️",
     layout="wide"
 )
 
@@ -41,566 +40,1231 @@ PROXY_SECRET = get_config("PROXY_SECRET")
 
 
 # ============================================================
-# TÍTULO
+# CSS
 # ============================================================
-
-st.title("👑 Clash Royale - Dashboard de Jogador")
 
 st.markdown(
-    "Insira a **Tag do Jogador** para visualizar o perfil, "
-    "tempo de conta e estatísticas."
+    """
+    <style>
+
+    .block-container {
+        max-width: 1500px;
+        padding-top: 2rem;
+        padding-bottom: 4rem;
+    }
+
+    .titulo-principal {
+        text-align: center;
+        font-size: 2.4rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
+    }
+
+    .subtitulo {
+        text-align: center;
+        opacity: 0.7;
+        margin-bottom: 2rem;
+    }
+
+    .nome-jogador {
+        text-align: center;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 0;
+    }
+
+    .tag-jogador {
+        text-align: center;
+        opacity: 0.65;
+        margin-bottom: 1rem;
+    }
+
+    .deck-titulo {
+        text-align: center;
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .nome-carta {
+        text-align: center;
+        font-size: 0.80rem;
+        font-weight: 700;
+        min-height: 38px;
+        margin-top: 4px;
+    }
+
+    .nivel-carta {
+        text-align: center;
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+
+    .raridade-carta {
+        text-align: center;
+        font-size: 0.70rem;
+        opacity: 0.65;
+    }
+
+    .vs-central {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 900;
+        padding-top: 10px;
+    }
+
+    .secao-titulo {
+        text-align: center;
+        font-size: 1.7rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .indicador {
+        text-align: center;
+        font-size: 1.6rem;
+        padding-top: 32px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 
 # ============================================================
-# CAMPO DE BUSCA
+# FUNÇÕES AUXILIARES
 # ============================================================
 
-player_tag_input = st.text_input(
-    "Tag do Jogador:",
-    value="#P9RV222GG",
-    help="Exemplo: #P9RV222GG ou P9RV222GG"
-)
+def normalizar_tag(tag):
+    """
+    Aceita:
+    P9RV222GG
+    #P9RV222GG
+
+    Retorna:
+    #P9RV222GG
+    """
+
+    if not tag:
+        return ""
+
+    tag = tag.strip().upper().replace(" ", "")
+
+    if not tag.startswith("#"):
+        tag = "#" + tag
+
+    return tag
 
 
-# ============================================================
-# BUSCA
-# ============================================================
+def formatar_numero(valor):
+    """
+    Exemplo:
+    12345 -> 12.345
+    """
 
-if st.button("Buscar Dados", type="primary") or player_tag_input:
+    try:
+        return f"{int(valor):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "0"
+
+
+def buscar_jogador(tag):
+    """
+    Consulta o nosso proxy.
+    A página nunca acessa diretamente a API da Supercell.
+    """
 
     if not PROXY_API_URL:
-        st.error(
-            "Erro: PROXY_API_URL não encontrada nos Secrets do Streamlit."
+        return None, (
+            "PROXY_API_URL não encontrada nos Secrets "
+            "do Streamlit ou nas variáveis de ambiente."
         )
 
-    elif not PROXY_SECRET:
-        st.error(
-            "Erro: PROXY_SECRET não encontrada nos Secrets do Streamlit."
+    if not PROXY_SECRET:
+        return None, (
+            "PROXY_SECRET não encontrada nos Secrets "
+            "do Streamlit ou nas variáveis de ambiente."
+        )
+
+    tag = normalizar_tag(tag)
+
+    if not tag or tag == "#":
+        return None, "Informe uma TAG válida."
+
+    encoded_tag = quote(tag, safe="")
+
+    url = (
+        f"{PROXY_API_URL.rstrip('/')}"
+        f"/v1/players/{encoded_tag}"
+    )
+
+    headers = {
+        "Accept": "application/json",
+        "X-Proxy-Token": PROXY_SECRET
+    }
+
+    try:
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=20
+        )
+
+        if response.status_code == 200:
+
+            try:
+                return response.json(), None
+
+            except ValueError:
+                return None, (
+                    "O servidor respondeu, mas os dados "
+                    "recebidos não são JSON válido."
+                )
+
+        if response.status_code == 404:
+            return None, (
+                f"Jogador {tag} não encontrado. "
+                "Confira a TAG informada."
+            )
+
+        if response.status_code == 401:
+            return None, (
+                "O proxy recusou a autenticação. "
+                "Verifique o PROXY_SECRET."
+            )
+
+        if response.status_code == 403:
+            return None, (
+                "A requisição foi recusada. "
+                "Verifique o PROXY_SECRET ou a configuração "
+                "da chave da Supercell na VM."
+            )
+
+        if response.status_code == 429:
+            return None, (
+                "Muitas consultas foram realizadas em pouco tempo. "
+                "Tente novamente em alguns instantes."
+            )
+
+        if response.status_code >= 500:
+            return None, (
+                f"O servidor proxy retornou o erro "
+                f"{response.status_code}."
+            )
+
+        return None, (
+            f"A consulta retornou o erro HTTP "
+            f"{response.status_code}."
+        )
+
+    except requests.exceptions.Timeout:
+
+        return None, (
+            "A comunicação com o servidor demorou "
+            "mais que o esperado."
+        )
+
+    except requests.exceptions.ConnectionError:
+
+        return None, (
+            "Não foi possível conectar ao servidor proxy."
+        )
+
+    except requests.exceptions.RequestException as erro:
+
+        return None, (
+            f"Erro de comunicação com o servidor: {erro}"
+        )
+
+    except Exception as erro:
+
+        return None, (
+            f"Ocorreu um erro inesperado: {erro}"
+        )
+
+
+# ============================================================
+# TEMPO DE CONTA
+# ============================================================
+
+def calcular_tempo_conta(jogador):
+
+    years_played = "Não identificado"
+
+    badges = jogador.get("badges", [])
+
+    for badge in badges:
+
+        badge_name = badge.get("name", "")
+
+        if (
+            "Years" in badge_name
+            or "years" in badge_name
+            or "Played" in badge_name
+        ):
+
+            valor = badge.get(
+                "progress",
+                badge.get("level", 0)
+            )
+
+            try:
+                valor = int(valor)
+            except (TypeError, ValueError):
+                valor = 0
+
+            if valor > 100:
+
+                anos = valor // 365
+                meses = (valor % 365) // 30
+
+                years_played = (
+                    f"{anos}a {meses}m"
+                )
+
+            elif valor > 0:
+
+                years_played = (
+                    f"{valor} anos"
+                )
+
+            break
+
+    if years_played == "Não identificado":
+
+        achievements = jogador.get(
+            "achievements",
+            []
+        )
+
+        for achievement in achievements:
+
+            nome = achievement.get("name", "")
+
+            if (
+                "Years" in nome
+                or "Poker" in nome
+            ):
+
+                valor = achievement.get(
+                    "value",
+                    0
+                )
+
+                try:
+                    valor = int(valor)
+                except (TypeError, ValueError):
+                    valor = 0
+
+                if valor > 100:
+
+                    anos = valor // 365
+
+                    years_played = (
+                        f"{anos} anos"
+                    )
+
+                elif valor > 0:
+
+                    years_played = (
+                        f"{valor} anos"
+                    )
+
+                break
+
+    return years_played
+
+
+# ============================================================
+# DADOS DO JOGADOR
+# ============================================================
+
+def obter_nome_arena(jogador):
+
+    arena = jogador.get("arena")
+
+    if isinstance(arena, dict):
+        return arena.get(
+            "name",
+            "Não informado"
+        )
+
+    return "Não informado"
+
+
+def obter_nome_cla(jogador):
+
+    clan = jogador.get("clan")
+
+    if isinstance(clan, dict):
+
+        return clan.get(
+            "name",
+            "Sem Clã"
+        )
+
+    return "Sem Clã"
+
+
+def calcular_winrate(jogador):
+
+    wins = jogador.get("wins", 0) or 0
+    losses = jogador.get("losses", 0) or 0
+
+    total = wins + losses
+
+    if total == 0:
+        return 0.0
+
+    return wins / total * 100
+
+
+# ============================================================
+# CARTAS
+# ============================================================
+
+def calcular_nivel_real(card):
+    """
+    Converte o nível interno retornado pela API
+    para o nível de batalha real.
+    """
+
+    raw_level = card.get(
+        "level",
+        1
+    )
+
+    max_level = card.get(
+        "maxLevel",
+        15
+    )
+
+    try:
+
+        raw_level = int(raw_level)
+        max_level = int(max_level)
+
+        real_level = (
+            15 - (
+                max_level - raw_level
+            )
+        )
+
+        return real_level
+
+    except (TypeError, ValueError):
+
+        return raw_level
+
+
+def obter_raridade(card):
+
+    max_level = card.get(
+        "maxLevel",
+        15
+    )
+
+    try:
+        max_level = int(max_level)
+    except (TypeError, ValueError):
+        return "Carta"
+
+    min_level = max_level - 14
+
+    rarity_map = {
+        1: "⚪ Comum",
+        3: "🟠 Rara",
+        6: "🟣 Épica",
+        9: "🟡 Lendária",
+        11: "🔴 Campeão"
+    }
+
+    return rarity_map.get(
+        min_level,
+        "Carta"
+    )
+
+
+def obter_imagem_carta(card):
+
+    icon_urls = card.get(
+        "iconUrls",
+        {}
+    )
+
+    if not isinstance(icon_urls, dict):
+        return None
+
+    return (
+        icon_urls.get("medium")
+        or icon_urls.get("evolutionMedium")
+    )
+
+
+# ============================================================
+# ELIXIR
+# ============================================================
+
+def calcular_elixir_medio(deck):
+
+    if not deck:
+        return None
+
+    custos = []
+
+    for carta in deck:
+
+        custo = carta.get(
+            "elixirCost"
+        )
+
+        if isinstance(
+            custo,
+            (int, float)
+        ):
+
+            custos.append(custo)
+
+    if not custos:
+        return None
+
+    return (
+        sum(custos)
+        / len(custos)
+    )
+
+
+# ============================================================
+# PERFIL DO JOGADOR
+# ============================================================
+
+def mostrar_perfil(jogador):
+
+    nome = jogador.get(
+        "name",
+        "Jogador"
+    )
+
+    tag = jogador.get(
+        "tag",
+        ""
+    )
+
+    trofeus = jogador.get(
+        "trophies",
+        0
+    )
+
+    recorde = jogador.get(
+        "bestTrophies",
+        0
+    )
+
+    nivel = jogador.get(
+        "expLevel",
+        "-"
+    )
+
+    wins = jogador.get(
+        "wins",
+        0
+    )
+
+    losses = jogador.get(
+        "losses",
+        0
+    )
+
+    batalhas = jogador.get(
+        "battleCount",
+        wins + losses
+    )
+
+    arena = obter_nome_arena(
+        jogador
+    )
+
+    cla = obter_nome_cla(
+        jogador
+    )
+
+    winrate = calcular_winrate(
+        jogador
+    )
+
+    tempo_conta = calcular_tempo_conta(
+        jogador
+    )
+
+    st.markdown(
+        f"""
+        <div class="nome-jogador">
+            {nome}
+        </div>
+
+        <div class="tag-jogador">
+            {tag}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric(
+            "🏆 Troféus",
+            formatar_numero(
+                trofeus
+            )
+        )
+
+        st.metric(
+            "⚔️ Vitórias",
+            formatar_numero(
+                wins
+            )
+        )
+
+        st.metric(
+            "🎮 Batalhas",
+            formatar_numero(
+                batalhas
+            )
+        )
+
+    with col2:
+
+        st.metric(
+            "🏅 Recorde",
+            formatar_numero(
+                recorde
+            )
+        )
+
+        st.metric(
+            "💔 Derrotas",
+            formatar_numero(
+                losses
+            )
+        )
+
+        st.metric(
+            "📊 Winrate",
+            f"{winrate:.1f}%"
+        )
+
+    st.markdown(
+        f"👑 **Nível do Rei:** {nivel}"
+    )
+
+    st.markdown(
+        f"🏟️ **Arena:** {arena}"
+    )
+
+    st.markdown(
+        f"🛡️ **Clã:** {cla}"
+    )
+
+    st.markdown(
+        f"⏳ **Tempo de conta:** {tempo_conta}"
+    )
+
+
+# ============================================================
+# DECK
+# ============================================================
+
+def mostrar_deck(jogador):
+
+    deck = jogador.get(
+        "currentDeck",
+        []
+    )
+
+    if not deck:
+
+        st.info(
+            "Nenhum deck atual encontrado "
+            "para este jogador."
+        )
+
+        return
+
+    st.markdown(
+        '<div class="deck-titulo">🃏 Deck Atual</div>',
+        unsafe_allow_html=True
+    )
+
+    primeira_linha = deck[:4]
+    segunda_linha = deck[4:8]
+
+    for linha in [
+        primeira_linha,
+        segunda_linha
+    ]:
+
+        cols = st.columns(4)
+
+        for coluna, carta in zip(
+            cols,
+            linha
+        ):
+
+            with coluna:
+
+                imagem = obter_imagem_carta(
+                    carta
+                )
+
+                if imagem:
+
+                    st.image(
+                        imagem,
+                        use_container_width=True
+                    )
+
+                nome = carta.get(
+                    "name",
+                    "Carta"
+                )
+
+                nivel_real = calcular_nivel_real(
+                    carta
+                )
+
+                raridade = obter_raridade(
+                    carta
+                )
+
+                st.markdown(
+                    f"""
+                    <div class="nome-carta">
+                        {nome}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if nivel_real == 15:
+
+                    st.markdown(
+                        """
+                        <div class="nivel-carta">
+                            👑 <b>Nível 15</b>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                else:
+
+                    st.markdown(
+                        f"""
+                        <div class="nivel-carta">
+                            ⭐ <b>Nível {nivel_real}</b>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                st.markdown(
+                    f"""
+                    <div class="raridade-carta">
+                        {raridade}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    elixir = calcular_elixir_medio(
+        deck
+    )
+
+    if elixir is not None:
+
+        st.metric(
+            "💧 Elixir médio",
+            f"{elixir:.1f}"
         )
 
     else:
 
-        # ----------------------------------------------------
-        # TRATAMENTO DA TAG
-        # ----------------------------------------------------
-
-        formatted_tag = player_tag_input.strip().upper()
-
-        if not formatted_tag.startswith("#"):
-            formatted_tag = "#" + formatted_tag
-
-        # IMPORTANTE:
-        # # precisa ser convertido para %23 dentro da URL
-        encoded_tag = quote(formatted_tag, safe="")
-
-        # ----------------------------------------------------
-        # REQUISIÇÃO PARA NOSSO PROXY
-        # ----------------------------------------------------
-
-        url = (
-            f"{PROXY_API_URL.rstrip('/')}"
-            f"/v1/players/{encoded_tag}"
+        st.caption(
+            "💧 Custo médio de elixir ainda "
+            "não disponível nesta resposta da API."
         )
 
-        headers = {
-            "Accept": "application/json",
-            "X-Proxy-Token": PROXY_SECRET
-        }
 
-        with st.spinner("Buscando dados na API do Clash Royale..."):
+# ============================================================
+# COMPARAÇÃO DIRETA
+# ============================================================
 
-            try:
+def indicador_comparacao(
+    valor1,
+    valor2
+):
 
-                response = requests.get(
-                    url,
-                    headers=headers,
-                    timeout=20
+    if valor1 > valor2:
+        return "⬅️"
+
+    if valor2 > valor1:
+        return "➡️"
+
+    return "🤝"
+
+
+def mostrar_comparacao(
+    jogador1,
+    jogador2
+):
+
+    nome1 = jogador1.get(
+        "name",
+        "Jogador 1"
+    )
+
+    nome2 = jogador2.get(
+        "name",
+        "Jogador 2"
+    )
+
+    dados = [
+
+        (
+            "Troféus",
+            jogador1.get(
+                "trophies",
+                0
+            ),
+            jogador2.get(
+                "trophies",
+                0
+            ),
+            "numero"
+        ),
+
+        (
+            "Recorde de Troféus",
+            jogador1.get(
+                "bestTrophies",
+                0
+            ),
+            jogador2.get(
+                "bestTrophies",
+                0
+            ),
+            "numero"
+        ),
+
+        (
+            "Vitórias",
+            jogador1.get(
+                "wins",
+                0
+            ),
+            jogador2.get(
+                "wins",
+                0
+            ),
+            "numero"
+        ),
+
+        (
+            "Nível do Rei",
+            jogador1.get(
+                "expLevel",
+                0
+            ),
+            jogador2.get(
+                "expLevel",
+                0
+            ),
+            "numero"
+        ),
+
+        (
+            "Winrate",
+            calcular_winrate(
+                jogador1
+            ),
+            calcular_winrate(
+                jogador2
+            ),
+            "percentual"
+        )
+    ]
+
+    st.markdown(
+        """
+        <div class="secao-titulo">
+            📊 Comparação Direta
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3 = st.columns(
+        [2, 1, 2]
+    )
+
+    with col1:
+
+        st.markdown(
+            f"### {nome1}"
+        )
+
+    with col2:
+
+        st.markdown(
+            """
+            <div class="vs-central">
+                VS
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col3:
+
+        st.markdown(
+            f"### {nome2}"
+        )
+
+    for (
+        titulo,
+        valor1,
+        valor2,
+        formato
+    ) in dados:
+
+        esquerda, centro, direita = (
+            st.columns(
+                [2, 1, 2]
+            )
+        )
+
+        if formato == "percentual":
+
+            texto1 = (
+                f"{valor1:.1f}%"
+            )
+
+            texto2 = (
+                f"{valor2:.1f}%"
+            )
+
+        else:
+
+            texto1 = formatar_numero(
+                valor1
+            )
+
+            texto2 = formatar_numero(
+                valor2
+            )
+
+        with esquerda:
+
+            st.metric(
+                titulo,
+                texto1
+            )
+
+        with centro:
+
+            indicador = (
+                indicador_comparacao(
+                    valor1,
+                    valor2
                 )
+            )
+
+            st.markdown(
+                f"""
+                <div class="indicador">
+                    {indicador}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with direita:
 
-                response.raise_for_status()
+            st.metric(
+                titulo,
+                texto2
+            )
 
-                data = response.json()
 
+# ============================================================
+# CABEÇALHO
+# ============================================================
 
-                # ====================================================
-                # 1. TEMPO DE CONTA
-                # ====================================================
+st.markdown(
+    """
+    <div class="titulo-principal">
+        ⚔️ Jogador X Jogador
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-                years_played = "Não identificado"
+st.markdown(
+    """
+    <div class="subtitulo">
+        Compare dois jogadores de Clash Royale,
+        suas estatísticas e seus decks.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# VERIFICAÇÃO DA CONFIGURAÇÃO
+# ============================================================
 
-                badges = data.get("badges", [])
+if not PROXY_API_URL:
 
-                for badge in badges:
+    st.error(
+        "PROXY_API_URL não foi encontrada. "
+        "Verifique os Secrets do Streamlit."
+    )
+
+    st.stop()
 
-                    badge_name = badge.get("name", "")
 
-                    if (
-                        "Years" in badge_name
-                        or "years" in badge_name
-                        or "Played" in badge_name
-                    ):
+if not PROXY_SECRET:
+
+    st.error(
+        "PROXY_SECRET não foi encontrada. "
+        "Verifique os Secrets do Streamlit."
+    )
 
-                        val = badge.get(
-                            "progress",
-                            badge.get("level", 0)
-                        )
+    st.stop()
+
+
+# ============================================================
+# FORMULÁRIO
+# ============================================================
 
-                        if val > 100:
+with st.form(
+    "form_comparacao"
+):
 
-                            anos = val // 365
-                            meses = (val % 365) // 30
+    col_tag1, col_tag2 = (
+        st.columns(2)
+    )
 
-                            years_played = (
-                                f"{anos}a {meses}m ({val}d)"
-                            )
+    with col_tag1:
 
-                        else:
+        tag1 = st.text_input(
+            "TAG do Jogador 1",
+            value="#P9RV222GG",
+            help=(
+                "Exemplo: #P9RV222GG "
+                "ou P9RV222GG"
+            )
+        )
 
-                            years_played = f"{val} anos"
+    with col_tag2:
 
-                        break
+        tag2 = st.text_input(
+            "TAG do Jogador 2",
+            placeholder="#XXXXXXXXX",
+            help=(
+                "Informe a TAG do segundo jogador."
+            )
+        )
 
+    comparar = st.form_submit_button(
+        "⚔️ Comparar Jogadores",
+        type="primary",
+        use_container_width=True
+    )
 
-                if years_played == "Não identificado":
 
-                    achievements = data.get(
-                        "achievements",
-                        []
-                    )
+# ============================================================
+# PROCESSAMENTO
+# ============================================================
 
-                    for ach in achievements:
+if comparar:
 
-                        ach_name = ach.get("name", "")
+    if not tag1 or not tag2:
 
-                        if (
-                            "Years" in ach_name
-                            or "Poker" in ach_name
-                        ):
+        st.warning(
+            "Informe as duas TAGs "
+            "para realizar a comparação."
+        )
 
-                            val = ach.get("value", 0)
+        st.stop()
 
-                            if val > 100:
+    tag1_normalizada = (
+        normalizar_tag(
+            tag1
+        )
+    )
 
-                                anos = val // 365
+    tag2_normalizada = (
+        normalizar_tag(
+            tag2
+        )
+    )
 
-                                years_played = (
-                                    f"{anos} anos"
-                                )
+    if (
+        tag1_normalizada
+        == tag2_normalizada
+    ):
 
-                            else:
+        st.warning(
+            "Informe duas TAGs diferentes."
+        )
 
-                                years_played = (
-                                    f"{val} anos"
-                                )
+        st.stop()
 
-                            break
+    with st.spinner(
+        "Buscando os dois jogadores..."
+    ):
 
+        jogador1, erro1 = (
+            buscar_jogador(
+                tag1_normalizada
+            )
+        )
 
-                # ====================================================
-                # 2. CABEÇALHO DO JOGADOR
-                # ====================================================
+        jogador2, erro2 = (
+            buscar_jogador(
+                tag2_normalizada
+            )
+        )
 
-                st.divider()
+    if erro1:
 
-                st.header(
-                    f"🎮 {data.get('name')} "
-                    f"({data.get('tag')})"
-                )
+        st.error(
+            f"Jogador 1: {erro1}"
+        )
 
+    if erro2:
 
-                clan_name = (
-                    data["clan"]["name"]
-                    if "clan" in data
-                    else "Sem Clã"
-                )
+        st.error(
+            f"Jogador 2: {erro2}"
+        )
 
+    if erro1 or erro2:
 
-                st.caption(
-                    f"🛡️ Clã: **{clan_name}** | "
-                    f"Nível do Rei: "
-                    f"**{data.get('expLevel')}** | "
-                    f"⏳ Tempo de Jogo: "
-                    f"**{years_played}**"
-                )
+        st.stop()
 
 
-                # ====================================================
-                # 3. ESTATÍSTICAS
-                # ====================================================
+    # ========================================================
+    # PERFIS
+    # ========================================================
 
-                wins = data.get("wins", 0)
+    st.divider()
 
-                losses = data.get("losses", 0)
+    coluna1, coluna2 = (
+        st.columns(
+            2,
+            gap="large"
+        )
+    )
 
-                battle_count = data.get(
-                    "battleCount",
-                    wins + losses
-                )
+    with coluna1:
 
+        mostrar_perfil(
+            jogador1
+        )
 
-                winrate = (
-                    wins / battle_count * 100
-                    if battle_count > 0
-                    else 0.0
-                )
+    with coluna2:
 
+        mostrar_perfil(
+            jogador2
+        )
 
-                col1, col2, col3, col4, col5, col6 = (
-                    st.columns(6)
-                )
 
+    # ========================================================
+    # DECK X DECK
+    # ========================================================
 
-                col1.metric(
-                    "Troféus Atuais",
-                    data.get("trophies", 0)
-                )
+    st.divider()
 
+    st.markdown(
+        """
+        <div class="secao-titulo">
+            🃏 Deck X Deck
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-                col2.metric(
-                    "Recorde Troféus",
-                    data.get("bestTrophies", 0)
-                )
+    deck1, deck2 = st.columns(
+        2,
+        gap="large"
+    )
 
+    with deck1:
 
-                col3.metric(
-                    "Vitórias",
-                    wins
-                )
+        st.markdown(
+            f"### {jogador1.get('name', 'Jogador 1')}"
+        )
 
+        mostrar_deck(
+            jogador1
+        )
 
-                col4.metric(
-                    "Derrotas 💔",
-                    losses
-                )
+    with deck2:
 
+        st.markdown(
+            f"### {jogador2.get('name', 'Jogador 2')}"
+        )
 
-                col5.metric(
-                    "Winrate",
-                    f"{winrate:.1f}%"
-                )
+        mostrar_deck(
+            jogador2
+        )
 
 
-                col6.metric(
-                    "Tempo de Conta",
-                    years_played
-                )
+    # ========================================================
+    # COMPARAÇÃO ESTATÍSTICA
+    # ========================================================
 
+    st.divider()
 
-                st.divider()
+    mostrar_comparacao(
+        jogador1,
+        jogador2
+    )
 
 
-                # ====================================================
-                # 4. DECK ATUAL
-                # ====================================================
+    # ========================================================
+    # PRÓXIMA EVOLUÇÃO
+    # ========================================================
 
-                st.subheader(
-                    "⚔️ Deck Batalha Atual"
-                )
+    st.divider()
 
+    with st.expander(
+        "🧠 Próxima etapa: Inteligência de Deck"
+    ):
 
-                with st.popover(
-                    "ℹ️ Como os níveis das cartas "
-                    "são calculados?"
-                ):
+        st.markdown(
+            """
+            A próxima evolução desta tela será analisar
+            automaticamente os dois decks e mostrar:
 
-                    st.markdown(
-                        """
-Dentro do Clash Royale, cada raridade de carta começa
-em um nível base diferente na API:
-
-* ⚪ **Comum:** Nível inicial 1
-* 🟠 **Rara:** Nível inicial 3
-* 🟣 **Épica:** Nível inicial 6
-* 🟡 **Lendária:** Nível inicial 9
-* 🔴 **Campeão:** Nível inicial 11
-
-Nosso sistema converte o nível interno da API para o
-**Nível de Batalha Real (1 ao 15)**.
-                        """
-                    )
-
-
-                current_deck = data.get(
-                    "currentDeck",
-                    []
-                )
-
-
-                if current_deck:
-
-                    cols = st.columns(8)
-
-
-                    for idx, card in enumerate(
-                        current_deck
-                    ):
-
-                        with cols[idx]:
-
-                            icon_url = (
-                                card
-                                .get("iconUrls", {})
-                                .get("medium", "")
-                            )
-
-
-                            if icon_url:
-
-                                st.image(
-                                    icon_url,
-                                    use_container_width=True
-                                )
-
-
-                            raw_level = card.get(
-                                "level",
-                                1
-                            )
-
-
-                            max_level = card.get(
-                                "maxLevel",
-                                15
-                            )
-
-
-                            real_level = (
-                                15
-                                - (
-                                    max_level
-                                    - raw_level
-                                )
-                            )
-
-
-                            min_level = (
-                                max_level - 14
-                            )
-
-
-                            rarity_map = {
-
-                                1: "⚪ Comum",
-
-                                3: "🟠 Rara",
-
-                                6: "🟣 Épica",
-
-                                9: "🟡 Lendária",
-
-                                11: "🔴 Campeão"
-
-                            }
-
-
-                            rarity_label = (
-                                rarity_map.get(
-                                    min_level,
-                                    "Carta"
-                                )
-                            )
-
-
-                            st.markdown(
-                                f"**{card.get('name')}**"
-                            )
-
-
-                            if real_level == 15:
-
-                                st.markdown(
-                                    "👑 **Nível 15** "
-                                    "*(Elite)*"
-                                )
-
-                            else:
-
-                                st.markdown(
-                                    f"⭐ **Nível "
-                                    f"{real_level}**"
-                                )
-
-
-                            st.caption(
-                                rarity_label
-                            )
-
-                else:
-
-                    st.info(
-                        "Nenhum deck atual encontrado "
-                        "para este jogador."
-                    )
-
-
-                st.divider()
-
-
-                # ====================================================
-                # 5. BADGES
-                # ====================================================
-
-                with st.expander(
-                    "🏅 Ver Badges / "
-                    "Insígnias do Jogador"
-                ):
-
-                    if badges:
-
-                        badge_data = [
-
-                            {
-
-                                "Nome":
-                                    b.get("name"),
-
-                                "Nível / Progresso":
-                                    b.get(
-                                        "progress",
-                                        b.get(
-                                            "level",
-                                            0
-                                        )
-                                    ),
-
-                                "Max":
-                                    b.get(
-                                        "max",
-                                        "-"
-                                    )
-
-                            }
-
-                            for b in badges
-
-                        ]
-
-
-                        st.dataframe(
-
-                            pd.DataFrame(
-                                badge_data
-                            ),
-
-                            use_container_width=True
-
-                        )
-
-
-                # ====================================================
-                # 6. TODAS AS CARTAS
-                # ====================================================
-
-                with st.expander(
-                    "📚 Ver todas as cartas "
-                    "da coleção do jogador"
-                ):
-
-                    cards_data = []
-
-
-                    for card in data.get(
-                        "cards",
-                        []
-                    ):
-
-                        cards_data.append(
-                            {
-
-                                "Nome da Carta":
-                                    card.get(
-                                        "name"
-                                    ),
-
-                                "Nível":
-                                    card.get(
-                                        "level"
-                                    ),
-
-                                "Nível Máximo":
-                                    card.get(
-                                        "maxLevel"
-                                    ),
-
-                                "Contagem de Cartas":
-                                    card.get(
-                                        "count",
-                                        0
-                                    )
-
-                            }
-                        )
-
-
-                    df_cards = pd.DataFrame(
-                        cards_data
-                    )
-
-
-                    st.dataframe(
-                        df_cards,
-                        use_container_width=True
-                    )
-
-
-            # ========================================================
-            # TRATAMENTO DE ERROS
-            # ========================================================
-
-            except requests.exceptions.HTTPError as err:
-
-                if response.status_code == 404:
-
-                    st.error(
-                        "Jogador não encontrado. "
-                        "Verifique a Tag informada."
-                    )
-
-
-                elif response.status_code == 401:
-
-                    st.error(
-                        "O proxy recusou a autenticação. "
-                        "Verifique o PROXY_SECRET."
-                    )
-
-
-                elif response.status_code == 403:
-
-                    st.error(
-                        "A requisição foi recusada. "
-                        "Verifique o PROXY_SECRET ou "
-                        "a chave da Supercell configurada "
-                        "na VM."
-                    )
-
-
-                else:
-
-                    st.error(
-                        f"Erro na requisição: {err}"
-                    )
-
-
-            except requests.exceptions.Timeout:
-
-                st.error(
-                    "A comunicação com o servidor "
-                    "demorou mais que o esperado."
-                )
-
-
-            except requests.exceptions.ConnectionError:
-
-                st.error(
-                    "Não foi possível conectar ao "
-                    "servidor do Clash Royale."
-                )
-
-
-            except Exception as e:
-
-                st.error(
-                    f"Ocorreu um erro inesperado: {e}"
-                )
+            - condição de vitória;
+            - custo médio de elixir;
+            - ciclo;
+            - tropas;
+            - feitiços;
+            - construções;
+            - defesa aérea;
+            - dano em área;
+            - cartas de reset;
+            - counters entre os decks;
+            - principais ameaças;
+            - vantagens e vulnerabilidades de cada deck.
+            """
+        )
