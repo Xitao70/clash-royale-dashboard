@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 # CONFIGURAÇÃO DA PÁGINA
 # ============================================================
 
+# Redeploy marker: 2026-09-21 navigation fix
+
 st.set_page_config(
     page_title="Clash Royale Dashboard",
     page_icon="👑",
