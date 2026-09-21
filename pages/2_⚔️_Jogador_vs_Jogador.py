@@ -34,11 +34,7 @@ def get_config(nome, padrao=None):
     return os.getenv(nome, padrao)
 
 
-PROXY_BASE_URL = get_config(
-    "PROXY_BASE_URL",
-    "https://SEU-PROXY-AQUI"
-)
-
+PROXY_API_URL = get_config("PROXY_API_URL")
 PROXY_SECRET = get_config("PROXY_SECRET")
 
 
@@ -167,7 +163,13 @@ def buscar_jogador(tag):
 
     tag_codificada = quote(tag, safe="")
 
-    url = f"{PROXY_BASE_URL.rstrip('/')}/v1/players/{tag_codificada}"
+    if not PROXY_API_URL:
+        return None, (
+            "PROXY_API_URL não foi encontrada nos Secrets do Streamlit "
+            "ou nas variáveis de ambiente."
+        )
+
+    url = f"{PROXY_API_URL.rstrip('/')}/v1/players/{tag_codificada}"
 
     headers = {
         "X-Proxy-Token": PROXY_SECRET,
@@ -589,84 +591,98 @@ if comparar:
         st.stop()
 
     # ========================================================
-    # PERFIS
+    # VISUALIZAÇÃO EM ABAS
     # ========================================================
 
     st.divider()
 
-    coluna_j1, coluna_j2 = st.columns(
-        2,
-        gap="large"
+    nome1 = jogador1.get("name", "Jogador 1")
+    nome2 = jogador2.get("name", "Jogador 2")
+
+    aba_jogador1, aba_jogador2, aba_comparacao = st.tabs(
+        [
+            f"👤 {nome1}",
+            f"👤 {nome2}",
+            "⚔️ Comparação"
+        ]
     )
 
-    with coluna_j1:
+    # --------------------------------------------------------
+    # ABA JOGADOR 1
+    # --------------------------------------------------------
+
+    with aba_jogador1:
 
         mostrar_perfil(jogador1)
 
-    with coluna_j2:
-
-        mostrar_perfil(jogador2)
-
-    # ========================================================
-    # DECK VS DECK
-    # ========================================================
-
-    st.divider()
-
-    st.markdown(
-        """
-        <div style="
-            text-align:center;
-            font-size:1.8rem;
-            font-weight:800;
-            margin-bottom:20px;
-        ">
-            🃏 DECK X DECK
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    coluna_deck1, coluna_deck2 = st.columns(
-        2,
-        gap="large"
-    )
-
-    with coluna_deck1:
-
-        st.markdown(
-            f"### {jogador1.get('name', 'Jogador 1')}"
-        )
+        st.divider()
 
         mostrar_deck(jogador1)
 
-    with coluna_deck2:
+    # --------------------------------------------------------
+    # ABA JOGADOR 2
+    # --------------------------------------------------------
 
-        st.markdown(
-            f"### {jogador2.get('name', 'Jogador 2')}"
-        )
+    with aba_jogador2:
+
+        mostrar_perfil(jogador2)
+
+        st.divider()
 
         mostrar_deck(jogador2)
 
-    # ========================================================
-    # COMPARAÇÃO ESTATÍSTICA
-    # ========================================================
+    # --------------------------------------------------------
+    # ABA COMPARAÇÃO
+    # --------------------------------------------------------
 
-    st.divider()
+    with aba_comparacao:
 
-    mostrar_comparacao(
-        jogador1,
-        jogador2
-    )
+        mostrar_comparacao(
+            jogador1,
+            jogador2
+        )
 
-    # ========================================================
-    # PRÓXIMA FASE
-    # ========================================================
+        st.divider()
 
-    st.divider()
+        st.markdown(
+            """
+            <div style="
+                text-align:center;
+                font-size:1.5rem;
+                font-weight:800;
+                margin-bottom:20px;
+            ">
+                🃏 Deck X Deck
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.info(
-        "💡 Próxima evolução: analisar automaticamente os dois decks, "
-        "identificar counters, condições de vitória, defesa aérea, "
-        "ciclo, feitiços, construções e vantagem de matchup."
-    )
+        coluna_deck1, coluna_deck2 = st.columns(
+            2,
+            gap="large"
+        )
+
+        with coluna_deck1:
+
+            st.markdown(
+                f"### {nome1}"
+            )
+
+            mostrar_deck(jogador1)
+
+        with coluna_deck2:
+
+            st.markdown(
+                f"### {nome2}"
+            )
+
+            mostrar_deck(jogador2)
+
+        st.divider()
+
+        st.info(
+            "💡 Próxima evolução: analisar automaticamente os dois decks, "
+            "identificar counters, condições de vitória, defesa aérea, "
+            "ciclo, feitiços, construções e vantagem de matchup."
+        )
