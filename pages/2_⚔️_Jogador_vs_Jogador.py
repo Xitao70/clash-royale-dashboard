@@ -5,7 +5,7 @@ import requests
 import streamlit as st
 
 from card_roles import ROLE_LABELS, resumo_de_roles
-from counter_engine import cobertura_respostas, classificar_ameacas, respostas_para_ameaca
+from counter_engine import cobertura_respostas, classificar_ameacas, respostas_para_ameaca, identificar_vulnerabilidades
 
 
 # ============================================================
@@ -452,6 +452,101 @@ isso em vez de adivinhar.
 A próxima etapa será usar essas funções para montar regras de interação, por exemplo:
 **anti-aéreo vs unidade aérea**, **small spell vs swarm**, **reset vs inferno** e
 **building vs building-target**, formando a base do analisador de counters.
+            """
+        )
+
+
+def mostrar_vulnerabilidades_matchup(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    vulnerabilidades1 = identificar_vulnerabilidades(
+        deck1,
+        deck2
+    )
+
+    vulnerabilidades2 = identificar_vulnerabilidades(
+        deck2,
+        deck1
+    )
+
+    st.markdown(
+        '<div class="comparison-title">⚠️ Vulnerabilidades do Matchup</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Mostra ameaças adversárias para as quais o deck tem poucas ou nenhuma "
+        "resposta natural mapeada."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"### {nome1}")
+
+        if not vulnerabilidades1:
+            st.success(
+                "Nenhuma vulnerabilidade relevante foi detectada com a base atual."
+            )
+
+        for item in vulnerabilidades1:
+            if item["level"] == "alta":
+                st.error(
+                    f"🔴 {item['threat']} — nenhuma resposta natural mapeada"
+                )
+            else:
+                st.warning(
+                    f"🟠 {item['threat']} — apenas 1 resposta natural mapeada"
+                )
+
+                if item["responses"]:
+                    resposta = item["responses"][0]
+                    st.caption(
+                        f"Resposta disponível: {resposta['defender']} — "
+                        f"{resposta['label']}"
+                    )
+
+    with col2:
+        st.markdown(f"### {nome2}")
+
+        if not vulnerabilidades2:
+            st.success(
+                "Nenhuma vulnerabilidade relevante foi detectada com a base atual."
+            )
+
+        for item in vulnerabilidades2:
+            if item["level"] == "alta":
+                st.error(
+                    f"🔴 {item['threat']} — nenhuma resposta natural mapeada"
+                )
+            else:
+                st.warning(
+                    f"🟠 {item['threat']} — apenas 1 resposta natural mapeada"
+                )
+
+                if item["responses"]:
+                    resposta = item["responses"][0]
+                    st.caption(
+                        f"Resposta disponível: {resposta['defender']} — "
+                        f"{resposta['label']}"
+                    )
+
+    with st.expander("ℹ️ Como esta seção funciona?"):
+        st.markdown(
+            """
+O sistema considera as principais ameaças do deck adversário e verifica quantas
+**respostas naturais** existem no seu deck:
+
+- 🔴 **Alta vulnerabilidade:** nenhuma resposta natural mapeada;
+- 🟠 **Vulnerabilidade moderada:** apenas uma resposta natural mapeada;
+- quando existem **duas ou mais respostas**, a ameaça não aparece nesta lista.
+
+Isso é uma **heurística de matchup**, não uma previsão de vitória. Interações reais
+dependem de nível, evolução, posicionamento, timing, suporte e habilidade do jogador.
             """
         )
 
@@ -1125,6 +1220,13 @@ if comparar:
         st.divider()
 
         mostrar_principais_ameacas(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_vulnerabilidades_matchup(
             jogador1,
             jogador2
         )
