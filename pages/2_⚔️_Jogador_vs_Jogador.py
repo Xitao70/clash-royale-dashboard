@@ -1432,94 +1432,133 @@ if comparar:
 
     with aba_comparacao:
 
-        mostrar_comparacao(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_resumo_estrategico(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_inteligencia_decks(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_funcoes_decks(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_respostas_naturais(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_principais_ameacas(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
-        mostrar_vulnerabilidades_matchup(
-            jogador1,
-            jogador2
-        )
-
-        st.divider()
-
         st.markdown(
             """
             <div style="
                 text-align:center;
-                font-size:1.5rem;
-                font-weight:800;
-                margin-bottom:20px;
+                font-size:1.15rem;
+                font-weight:700;
+                margin-bottom:12px;
+                opacity:.85;
             ">
-                🃏 Deck X Deck
+                Painel de matchup
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        coluna_deck1, coluna_deck2 = st.columns(
-            2,
-            gap="large"
+        aba_resumo, aba_estrategia, aba_cobertura, aba_decks = st.tabs(
+            [
+                "📊 Resumo",
+                "🧭 Estratégia",
+                "🧩 Cobertura",
+                "🃏 Decks"
+            ]
         )
 
-        with coluna_deck1:
+        # ====================================================
+        # RESUMO
+        # ====================================================
 
-            st.markdown(
-                f"### {nome1}"
+        with aba_resumo:
+
+            mostrar_comparacao(
+                jogador1,
+                jogador2
             )
 
-            mostrar_deck(jogador1)
+            st.divider()
 
-        with coluna_deck2:
-
-            st.markdown(
-                f"### {nome2}"
+            mostrar_inteligencia_decks(
+                jogador1,
+                jogador2
             )
 
-            mostrar_deck(jogador2)
+        # ====================================================
+        # ESTRATÉGIA
+        # ====================================================
 
-        st.divider()
+        with aba_estrategia:
 
-        st.info(
-            "💡 Próxima evolução: analisar automaticamente os dois decks, "
-            "identificar counters, condições de vitória, defesa aérea, "
-            "ciclo, feitiços, construções e vantagem de matchup."
-        )
+            mostrar_resumo_estrategico(
+                jogador1,
+                jogador2
+            )
+
+            st.divider()
+
+            mostrar_vulnerabilidades_matchup(
+                jogador1,
+                jogador2
+            )
+
+            st.divider()
+
+            mostrar_principais_ameacas(
+                jogador1,
+                jogador2
+            )
+
+        # ====================================================
+        # COBERTURA TÁTICA
+        # ====================================================
+
+        with aba_cobertura:
+
+            mostrar_funcoes_decks(
+                jogador1,
+                jogador2
+            )
+
+            st.divider()
+
+            mostrar_respostas_naturais(
+                jogador1,
+                jogador2
+            )
+
+        # ====================================================
+        # DECK X DECK
+        # ====================================================
+
+        with aba_decks:
+
+            st.markdown(
+                """
+                <div style="
+                    text-align:center;
+                    font-size:1.5rem;
+                    font-weight:800;
+                    margin-bottom:20px;
+                ">
+                    🃏 Deck X Deck
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            coluna_deck1, coluna_deck2 = st.columns(
+                2,
+                gap="large"
+            )
+
+            with coluna_deck1:
+
+                st.markdown(
+                    f"### {nome1}"
+                )
+
+                mostrar_deck(jogador1)
+
+            with coluna_deck2:
+
+                st.markdown(
+                    f"### {nome2}"
+                )
+
+                mostrar_deck(jogador2)
+
+            st.caption(
+                "Use as abas Resumo, Estratégia e Cobertura para interpretar "
+                "as diferenças estruturais entre os dois decks."
+            )
