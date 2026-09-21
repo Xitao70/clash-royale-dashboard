@@ -179,3 +179,103 @@ def cobertura_respostas(deck_defensor, deck_atacante):
 
 def explicar_role(role):
     return ROLE_LABELS.get(role, role)
+
+
+THREAT_ROLES = {
+    "win_condition": 5,
+    "tank": 4,
+    "building_target": 4,
+    "tank_killer": 3,
+    "swarm": 2,
+    "air": 2,
+    "ranged": 1,
+    "pressure": 3,
+}
+
+
+def classificar_ameacas(deck):
+    """
+    Pontua cartas por relevância ofensiva/estratégica com base em suas funções.
+    A pontuação é heurística e serve apenas para priorização visual.
+    """
+
+    ameacas = []
+
+    for carta in deck or []:
+        nome = carta.get("name", "Carta")
+        roles = roles_da_carta(nome)
+
+        if not roles:
+            continue
+
+        score = sum(
+            peso
+            for role, peso in THREAT_ROLES.items()
+            if role in roles
+        )
+
+        if score <= 0:
+            continue
+
+        ameacas.append(
+            {
+                "name": nome,
+                "roles": roles,
+                "score": score,
+                "elixir": carta.get("elixirCost"),
+            }
+        )
+
+    return sorted(
+        ameacas,
+        key=lambda item: (-item["score"], item["name"])
+    )
+
+
+def respostas_para_ameaca(deck_defensor, nome_ameaca):
+    """
+    Retorna respostas naturais do deck defensor contra uma carta específica.
+    """
+
+    respostas = []
+
+    for defensor in deck_defensor or []:
+        nome_defensor = defensor.get("name", "Carta")
+        roles_defensor = roles_da_carta(nome_defensor)
+        roles_ameaca = roles_da_carta(nome_ameaca)
+
+        if not roles_defensor or not roles_ameaca:
+            continue
+
+        for regra in ROLE_RESPONSES:
+            if (
+                regra["defender_role"] in roles_defensor
+                and regra["attacker_role"] in roles_ameaca
+            ):
+                respostas.append(
+                    {
+                        "defender": nome_defensor,
+                        "label": regra["label"],
+                        "weight": regra["weight"],
+                    }
+                )
+
+    # Remove duplicações e prioriza regras mais fortes.
+    respostas_ordenadas = sorted(
+        respostas,
+        key=lambda item: (-item["weight"], item["defender"])
+    )
+
+    vistos = set()
+    unicos = []
+
+    for item in respostas_ordenadas:
+        chave = (item["defender"], item["label"])
+
+        if chave in vistos:
+            continue
+
+        vistos.add(chave)
+        unicos.append(item)
+
+    return unicos
