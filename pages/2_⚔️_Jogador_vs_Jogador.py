@@ -4,6 +4,8 @@ from urllib.parse import quote
 import requests
 import streamlit as st
 
+from card_roles import ROLE_LABELS, resumo_de_roles
+
 
 # ============================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -342,6 +344,115 @@ def cartas_em_comum(deck1, deck2):
     }
 
     return sorted(nomes1.intersection(nomes2))
+
+
+def mostrar_funcoes_decks(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    resumo1 = resumo_de_roles(deck1)
+    resumo2 = resumo_de_roles(deck2)
+
+    st.markdown(
+        '<div class="comparison-title">🧩 Funções dos Decks</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Classificação tática inicial baseada em uma base explícita de funções das cartas."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"### {nome1}")
+        st.progress(min(resumo1["cobertura"] / 100, 1.0))
+        st.caption(
+            f"Cobertura da base: {resumo1['classificadas']}/{resumo1['total']} cartas "
+            f"({resumo1['cobertura']:.0f}%)"
+        )
+
+        if resumo1["contagem"]:
+            for role, quantidade in sorted(
+                resumo1["contagem"].items(),
+                key=lambda item: (-item[1], ROLE_LABELS.get(item[0], item[0]))
+            ):
+                st.write(f"{ROLE_LABELS.get(role, role)}: **{quantidade}**")
+
+        if resumo1["nao_classificadas"]:
+            st.warning(
+                "Não classificadas: "
+                + ", ".join(resumo1["nao_classificadas"])
+            )
+
+    with col2:
+        st.markdown(f"### {nome2}")
+        st.progress(min(resumo2["cobertura"] / 100, 1.0))
+        st.caption(
+            f"Cobertura da base: {resumo2['classificadas']}/{resumo2['total']} cartas "
+            f"({resumo2['cobertura']:.0f}%)"
+        )
+
+        if resumo2["contagem"]:
+            for role, quantidade in sorted(
+                resumo2["contagem"].items(),
+                key=lambda item: (-item[1], ROLE_LABELS.get(item[0], item[0]))
+            ):
+                st.write(f"{ROLE_LABELS.get(role, role)}: **{quantidade}**")
+
+        if resumo2["nao_classificadas"]:
+            st.warning(
+                "Não classificadas: "
+                + ", ".join(resumo2["nao_classificadas"])
+            )
+
+    roles_chave = [
+        "win_condition",
+        "anti_air",
+        "splash",
+        "building",
+        "reset",
+        "small_spell",
+        "big_spell",
+        "swarm",
+        "tank_killer",
+    ]
+
+    st.markdown("#### ⚔️ Comparação de cobertura tática")
+
+    for role in roles_chave:
+        q1 = resumo1["contagem"].get(role, 0)
+        q2 = resumo2["contagem"].get(role, 0)
+
+        esquerda, centro, direita = st.columns([2, 1, 2])
+
+        with esquerda:
+            st.metric(ROLE_LABELS.get(role, role), q1)
+
+        with centro:
+            st.markdown(
+                "<div style='text-align:center; padding-top:32px;'>↔️</div>",
+                unsafe_allow_html=True
+            )
+
+        with direita:
+            st.metric(ROLE_LABELS.get(role, role), q2)
+
+    with st.expander("ℹ️ Sobre esta classificação"):
+        st.markdown(
+            """
+Esta é uma **base inicial e auditável**. Cada carta possui uma ou mais funções táticas
+definidas explicitamente. Quando uma carta ainda não está cadastrada, o sistema mostra
+isso em vez de adivinhar.
+
+A próxima etapa será usar essas funções para montar regras de interação, por exemplo:
+**anti-aéreo vs unidade aérea**, **small spell vs swarm**, **reset vs inferno** e
+**building vs building-target**, formando a base do analisador de counters.
+            """
+        )
 
 
 def mostrar_inteligencia_decks(j1, j2):
@@ -826,6 +937,13 @@ if comparar:
         st.divider()
 
         mostrar_inteligencia_decks(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_funcoes_decks(
             jogador1,
             jogador2
         )
