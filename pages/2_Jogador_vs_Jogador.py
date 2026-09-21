@@ -9,40 +9,6 @@ from counter_engine import cobertura_respostas, classificar_ameacas, respostas_p
 
 
 # ============================================================
-# CONFIGURAÇÃO DA PÁGINA
-# ============================================================
-
-st.set_page_config(
-    page_title="Jogador vs Jogador",
-    page_icon="⚔️",
-    layout="wide",
-)
-
-
-# ============================================================
-# NAVEGAÇÃO PRINCIPAL
-# ============================================================
-
-st.markdown(
-    """
-    <div style="display:flex; gap:12px; margin: 4px 0 18px 0;">
-        <a href="/" target="_self"
-           style="text-decoration:none; padding:10px 16px; border-radius:10px;
-                  border:1px solid rgba(128,128,128,.35); font-weight:700;">
-            👑 Dashboard
-        </a>
-        <a href="/Jogador_vs_Jogador" target="_self"
-           style="text-decoration:none; padding:10px 16px; border-radius:10px;
-                  border:1px solid rgba(128,128,128,.35); font-weight:700;">
-            ⚔️ Jogador vs Jogador
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
 # CONFIGURAÇÃO DO PROXY
 # ============================================================
 
