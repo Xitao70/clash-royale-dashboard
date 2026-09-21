@@ -287,6 +287,164 @@ def calcular_elixir_medio(deck):
     return sum(custos) / len(custos)
 
 
+def obter_custos_deck(deck):
+    custos = []
+
+    for carta in deck or []:
+        custo = carta.get("elixirCost")
+
+        if isinstance(custo, (int, float)):
+            custos.append(custo)
+
+    return custos
+
+
+def analisar_deck(deck):
+    """
+    Métricas calculadas apenas com os dados oficiais retornados no deck.
+    """
+
+    custos = obter_custos_deck(deck)
+
+    if not custos:
+        return {
+            "elixir_medio": 0,
+            "ciclo_4": 0,
+            "menor_custo": 0,
+            "maior_custo": 0,
+            "cartas_leves": 0,
+            "cartas_pesadas": 0,
+        }
+
+    custos_ordenados = sorted(custos)
+
+    return {
+        "elixir_medio": sum(custos) / len(custos),
+        "ciclo_4": sum(custos_ordenados[:4]),
+        "menor_custo": min(custos),
+        "maior_custo": max(custos),
+        "cartas_leves": sum(1 for custo in custos if custo <= 3),
+        "cartas_pesadas": sum(1 for custo in custos if custo >= 5),
+    }
+
+
+def cartas_em_comum(deck1, deck2):
+    nomes1 = {
+        carta.get("name")
+        for carta in deck1 or []
+        if carta.get("name")
+    }
+
+    nomes2 = {
+        carta.get("name")
+        for carta in deck2 or []
+        if carta.get("name")
+    }
+
+    return sorted(nomes1.intersection(nomes2))
+
+
+def mostrar_inteligencia_decks(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    analise1 = analisar_deck(deck1)
+    analise2 = analisar_deck(deck2)
+
+    st.markdown(
+        '<div class="comparison-title">🧠 Inteligência de Deck</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Métricas calculadas a partir dos custos de elixir dos decks atuais."
+    )
+
+    metricas = [
+        (
+            "💧 Elixir médio",
+            f"{analise1['elixir_medio']:.1f}",
+            f"{analise2['elixir_medio']:.1f}"
+        ),
+        (
+            "🔄 4 cartas mais baratas",
+            f"{analise1['ciclo_4']:.0f} elixir",
+            f"{analise2['ciclo_4']:.0f} elixir"
+        ),
+        (
+            "🪶 Cartas leves (≤3)",
+            str(analise1["cartas_leves"]),
+            str(analise2["cartas_leves"])
+        ),
+        (
+            "🧱 Cartas pesadas (≥5)",
+            str(analise1["cartas_pesadas"]),
+            str(analise2["cartas_pesadas"])
+        ),
+        (
+            "⬇️ Menor custo",
+            f"{analise1['menor_custo']:.0f}",
+            f"{analise2['menor_custo']:.0f}"
+        ),
+        (
+            "⬆️ Maior custo",
+            f"{analise1['maior_custo']:.0f}",
+            f"{analise2['maior_custo']:.0f}"
+        ),
+    ]
+
+    cab1, cab2, cab3 = st.columns([2, 1, 2])
+
+    with cab1:
+        st.markdown(f"### {nome1}")
+
+    with cab2:
+        st.markdown("### VS")
+
+    with cab3:
+        st.markdown(f"### {nome2}")
+
+    for titulo, valor1, valor2 in metricas:
+        col1, centro, col2 = st.columns([2, 1, 2])
+
+        with col1:
+            st.metric(titulo, valor1)
+
+        with centro:
+            st.markdown(
+                "<div style='text-align:center; padding-top:32px;'>↔️</div>",
+                unsafe_allow_html=True
+            )
+
+        with col2:
+            st.metric(titulo, valor2)
+
+    comuns = cartas_em_comum(deck1, deck2)
+
+    st.markdown("#### 🃏 Cartas presentes nos dois decks")
+
+    if comuns:
+        st.write(" • ".join(comuns))
+    else:
+        st.caption("Os dois decks não possuem cartas em comum.")
+
+    with st.expander("ℹ️ Como interpretar estas métricas?"):
+        st.markdown(
+            """
+- **Elixir médio:** média do custo das 8 cartas do deck.
+- **4 cartas mais baratas:** soma das quatro cartas de menor custo; serve como indicador simples de quão barato é o núcleo de rotação.
+- **Cartas leves:** cartas de custo 3 ou menos.
+- **Cartas pesadas:** cartas de custo 5 ou mais.
+- **Menor/Maior custo:** extremos de custo dentro do deck.
+
+Essas métricas ainda não medem matchup ou counters. Essa será a próxima camada, usando uma base de funções e interações entre cartas.
+            """
+        )
+
+
 def obter_url_imagem(carta):
     """
     A API normalmente fornece iconUrls.medium.
@@ -661,6 +819,13 @@ if comparar:
     with aba_comparacao:
 
         mostrar_comparacao(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_inteligencia_decks(
             jogador1,
             jogador2
         )
