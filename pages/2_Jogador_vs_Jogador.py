@@ -1,4 +1,5 @@
 import os
+import html
 from urllib.parse import quote
 
 import requests
@@ -104,6 +105,99 @@ st.markdown(
         font-size:1.4rem;
         margin-top:25px;
         margin-bottom:15px;
+    }
+
+    .matchup-board {
+        border: 1px solid rgba(128,128,128,0.25);
+        border-radius: 16px;
+        overflow: hidden;
+        margin: 10px 0 18px 0;
+    }
+
+    .matchup-head,
+    .matchup-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(120px, .8fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+    }
+
+    .matchup-head {
+        font-weight: 800;
+        background: rgba(128,128,128,0.08);
+        font-size: 1rem;
+    }
+
+    .matchup-row {
+        border-top: 1px solid rgba(128,128,128,0.14);
+    }
+
+    .matchup-value-left {
+        text-align: left;
+        font-weight: 800;
+        font-size: 1.05rem;
+    }
+
+    .matchup-label {
+        text-align: center;
+        opacity: .72;
+        font-size: .82rem;
+        font-weight: 700;
+    }
+
+    .matchup-value-right {
+        text-align: right;
+        font-weight: 800;
+        font-size: 1.05rem;
+    }
+
+    .matchup-note {
+        text-align: center;
+        opacity: .68;
+        font-size: .78rem;
+        margin-top: -8px;
+        margin-bottom: 14px;
+    }
+
+    @media (max-width: 700px) {
+        .block-container {
+            padding-left: .8rem;
+            padding-right: .8rem;
+        }
+
+        .main-title {
+            font-size: 1.75rem;
+        }
+
+        .subtitle {
+            font-size: .9rem;
+            margin-bottom: 1rem;
+        }
+
+        .matchup-head,
+        .matchup-row {
+            grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr);
+            gap: 6px;
+            padding: 8px 8px;
+        }
+
+        .matchup-head {
+            font-size: .88rem;
+        }
+
+        .matchup-value-left,
+        .matchup-value-right {
+            font-size: .92rem;
+        }
+
+        .matchup-label {
+            font-size: .69rem;
+        }
+
+        div[data-testid="stMetricValue"] {
+            font-size: 1.55rem;
+        }
     }
 
     </style>
@@ -311,6 +405,96 @@ def cartas_em_comum(deck1, deck2):
     }
 
     return sorted(nomes1.intersection(nomes2))
+
+
+def mostrar_snapshot_matchup(j1, j2):
+    """
+    Quadro compacto para leitura rápida do confronto, pensado também para celular.
+    """
+
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = html.escape(str(j1.get("name", "Jogador 1")))
+    nome2 = html.escape(str(j2.get("name", "Jogador 2")))
+
+    analise1 = analisar_deck(deck1)
+    analise2 = analisar_deck(deck2)
+
+    cobertura1 = cobertura_respostas(deck1, deck2)
+    cobertura2 = cobertura_respostas(deck2, deck1)
+
+    vulnerabilidades1 = identificar_vulnerabilidades(deck1, deck2)
+    vulnerabilidades2 = identificar_vulnerabilidades(deck2, deck1)
+
+    roles1 = resumo_de_roles(deck1)
+    roles2 = resumo_de_roles(deck2)
+
+    linhas = [
+        (
+            numero(j1.get("trophies", 0)),
+            "🏆 Troféus",
+            numero(j2.get("trophies", 0))
+        ),
+        (
+            f"{calcular_taxa_vitoria(j1):.1f}%",
+            "📊 Winrate",
+            f"{calcular_taxa_vitoria(j2):.1f}%"
+        ),
+        (
+            f"{analise1['elixir_medio']:.1f}",
+            "💧 Elixir médio",
+            f"{analise2['elixir_medio']:.1f}"
+        ),
+        (
+            f"{analise1['ciclo_4']:.0f}",
+            "🔄 Ciclo 4",
+            f"{analise2['ciclo_4']:.0f}"
+        ),
+        (
+            f"{cobertura1['cobertas']}/{cobertura1['total']}",
+            "🛡️ Ameaças cobertas",
+            f"{cobertura2['cobertas']}/{cobertura2['total']}"
+        ),
+        (
+            str(len(vulnerabilidades1)),
+            "⚠️ Vulnerabilidades",
+            str(len(vulnerabilidades2))
+        ),
+        (
+            f"{roles1['cobertura']:.0f}%",
+            "🧩 Base classificada",
+            f"{roles2['cobertura']:.0f}%"
+        ),
+    ]
+
+    html_linhas = "".join(
+        f"""
+        <div class="matchup-row">
+            <div class="matchup-value-left">{html.escape(str(valor1))}</div>
+            <div class="matchup-label">{rotulo}</div>
+            <div class="matchup-value-right">{html.escape(str(valor2))}</div>
+        </div>
+        """
+        for valor1, rotulo, valor2 in linhas
+    )
+
+    st.markdown(
+        f"""
+        <div class="matchup-board">
+            <div class="matchup-head">
+                <div>{nome1}</div>
+                <div style="text-align:center;">VS</div>
+                <div style="text-align:right;">{nome2}</div>
+            </div>
+            {html_linhas}
+        </div>
+        <div class="matchup-note">
+            Visão rápida; abra as abas abaixo para ver a explicação de cada indicador.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 def mostrar_funcoes_decks(j1, j2):
@@ -1411,6 +1595,11 @@ if comparar:
             </div>
             """,
             unsafe_allow_html=True
+        )
+
+        mostrar_snapshot_matchup(
+            jogador1,
+            jogador2
         )
 
         aba_resumo, aba_estrategia, aba_cobertura, aba_decks = st.tabs(
