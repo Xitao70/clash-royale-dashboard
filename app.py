@@ -19,6 +19,27 @@ st.set_page_config(
 
 
 # ============================================================
+# NAVEGAÇÃO PRINCIPAL
+# ============================================================
+
+nav_dashboard, nav_comparacao = st.columns(2)
+
+with nav_dashboard:
+    st.page_link(
+        "app.py",
+        label="👑 Dashboard"
+    )
+
+with nav_comparacao:
+    st.page_link(
+        "pages/2_⚔️_Jogador_vs_Jogador.py",
+        label="⚔️ Jogador vs Jogador"
+    )
+
+st.divider()
+
+
+# ============================================================
 # CONFIGURAÇÃO DO PROXY
 # ============================================================
 
