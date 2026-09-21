@@ -63,7 +63,7 @@ CARD_ROLES = {
 
     # Air troops
     "Baby Dragon": {"air", "anti_air", "splash"},
-    "Inferno Dragon": {"air", "anti_air", "tank_killer"},
+    "Inferno Dragon": {"air", "anti_air", "tank_killer", "inferno"},
     "Mega Minion": {"air", "anti_air"},
     "Minions": {"air", "anti_air", "swarm"},
     "Minion Horde": {"air", "anti_air", "swarm"},
@@ -91,7 +91,7 @@ CARD_ROLES = {
     "Cannon": {"building", "defense"},
     "Tesla": {"building", "defense", "anti_air"},
     "Bomb Tower": {"building", "defense", "splash"},
-    "Inferno Tower": {"building", "defense", "tank_killer", "anti_air"},
+    "Inferno Tower": {"building", "defense", "tank_killer", "anti_air", "inferno"},
     "Goblin Cage": {"building", "defense"},
     "Tombstone": {"building", "defense", "swarm"},
     "Furnace": {"building", "defense", "splash"},
@@ -153,6 +153,7 @@ ROLE_LABELS = {
     "pressure": "🚨 Pressão",
     "building_pressure": "🏚️ Pressão em construções",
     "economy": "💧 Economia de elixir",
+    "inferno": "🔥 Mecânica Inferno",
 }
 
 
