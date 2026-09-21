@@ -5,7 +5,7 @@ import requests
 import streamlit as st
 
 from card_roles import ROLE_LABELS, resumo_de_roles
-from counter_engine import cobertura_respostas
+from counter_engine import cobertura_respostas, classificar_ameacas, respostas_para_ameaca
 
 
 # ============================================================
@@ -452,6 +452,90 @@ isso em vez de adivinhar.
 A próxima etapa será usar essas funções para montar regras de interação, por exemplo:
 **anti-aéreo vs unidade aérea**, **small spell vs swarm**, **reset vs inferno** e
 **building vs building-target**, formando a base do analisador de counters.
+            """
+        )
+
+
+def mostrar_principais_ameacas(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    ameacas1 = classificar_ameacas(deck1)[:4]
+    ameacas2 = classificar_ameacas(deck2)[:4]
+
+    st.markdown(
+        '<div class="comparison-title">🚨 Principais Ameaças</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Prioridade heurística das cartas ofensivas/estratégicas do deck e "
+        "as respostas naturais encontradas no deck adversário."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"### {nome1}")
+
+        if not ameacas1:
+            st.caption("Nenhuma ameaça classificada com a base atual.")
+
+        for ameaca in ameacas1:
+            st.markdown(f"**{ameaca['name']}**")
+
+            respostas = respostas_para_ameaca(
+                deck2,
+                ameaca["name"]
+            )
+
+            if respostas:
+                st.caption(f"Respostas de {nome2}:")
+                for resposta in respostas[:3]:
+                    st.write(
+                        f"• {resposta['defender']} — {resposta['label']}"
+                    )
+            else:
+                st.warning(
+                    f"Nenhuma resposta natural mapeada no deck de {nome2}."
+                )
+
+    with col2:
+        st.markdown(f"### {nome2}")
+
+        if not ameacas2:
+            st.caption("Nenhuma ameaça classificada com a base atual.")
+
+        for ameaca in ameacas2:
+            st.markdown(f"**{ameaca['name']}**")
+
+            respostas = respostas_para_ameaca(
+                deck1,
+                ameaca["name"]
+            )
+
+            if respostas:
+                st.caption(f"Respostas de {nome1}:")
+                for resposta in respostas[:3]:
+                    st.write(
+                        f"• {resposta['defender']} — {resposta['label']}"
+                    )
+            else:
+                st.warning(
+                    f"Nenhuma resposta natural mapeada no deck de {nome1}."
+                )
+
+    with st.expander("ℹ️ Como as ameaças são priorizadas?"):
+        st.markdown(
+            """
+A prioridade considera funções como **condição de vitória, tanque, foco em
+construções, pressão, mata-tanque, unidade aérea e enxame**.
+
+A pontuação serve apenas para ordenar as cartas mais relevantes visualmente.
+Ela **não é uma nota de força da carta** e não prevê quem venceria a partida.
             """
         )
 
@@ -1034,6 +1118,13 @@ if comparar:
         st.divider()
 
         mostrar_respostas_naturais(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_principais_ameacas(
             jogador1,
             jogador2
         )
