@@ -25,6 +25,8 @@ CARD_ROLES = {
     "Elixir Golem": {"win_condition", "tank", "building_target"},
     "Wall Breakers": {"win_condition", "building_target"},
     "Three Musketeers": {"win_condition", "ranged", "anti_air"},
+    "Suspicious Bush": {"win_condition", "building_target", "pressure", "bait"},
+    "Minion Giant": {"win_condition", "tank", "air", "ranged", "building_target"},
 
     # Tanks / mini tanks / melee defense
     "P.E.K.K.A": {"tank_killer", "mini_tank"},
@@ -39,6 +41,12 @@ CARD_ROLES = {
     "Skeleton King": {"mini_tank", "swarm"},
     "Mighty Miner": {"tank_killer", "mini_tank"},
     "Monk": {"mini_tank", "control"},
+    "Ice Golem": {"mini_tank", "cycle", "control"},
+    "Royal Ghost": {"mini_tank", "splash", "pressure"},
+    "Battle Healer": {"mini_tank", "support"},
+    "Berserker": {"mini_tank", "cycle"},
+    "Rune Giant": {"mini_tank", "support"},
+    "Boss Bandit": {"mini_tank", "pressure", "control"},
 
     # Anti-air / ranged support
     "Musketeer": {"ranged", "anti_air"},
@@ -60,6 +68,12 @@ CARD_ROLES = {
     "Bowler": {"ranged", "splash", "control"},
     "Sparky": {"ranged", "tank_killer", "splash"},
     "Zappies": {"ranged", "anti_air", "reset", "control"},
+    "Bomber": {"ranged", "splash", "cycle"},
+    "Cannon Cart": {"ranged", "defense", "mini_tank"},
+    "Goblin Machine": {"ranged", "splash", "mini_tank"},
+    "Goblinstein": {"tank", "ranged", "control", "reset"},
+    "Archer Queen": {"ranged", "anti_air", "pressure"},
+    "Spirit Empress": {"ranged", "anti_air", "pressure"},
 
     # Air troops
     "Baby Dragon": {"air", "anti_air", "splash"},
@@ -70,6 +84,7 @@ CARD_ROLES = {
     "Bats": {"air", "anti_air", "swarm", "cycle"},
     "Phoenix": {"air", "anti_air"},
     "Skeleton Dragons": {"air", "anti_air", "splash"},
+    "Electro Dragon": {"air", "anti_air", "reset", "splash"},
 
     # Swarms / cycle
     "Skeletons": {"swarm", "cycle"},
@@ -112,6 +127,7 @@ CARD_ROLES = {
     "Clone": {"utility_spell", "support"},
     "Mirror": {"utility_spell"},
     "Earthquake": {"utility_spell", "building_pressure"},
+    "Goblin Curse": {"utility_spell", "splash", "control"},
 
     # Big spells
     "Fireball": {"big_spell", "splash", "anti_air"},
@@ -187,4 +203,25 @@ def resumo_de_roles(deck):
         "total": total,
         "cobertura": cobertura,
         "nao_classificadas": nao_classificadas,
+    }
+
+
+
+def cobertura_global_da_base(nomes_cartas):
+    """
+    Auditoria simples da taxonomia para uma lista de nomes de cartas.
+    Útil para medir a cobertura da base sem depender da interface.
+    """
+    nomes = [nome for nome in nomes_cartas if nome]
+    classificadas = [nome for nome in nomes if roles_da_carta(nome)]
+    faltantes = [nome for nome in nomes if not roles_da_carta(nome)]
+
+    total = len(nomes)
+    percentual = (len(classificadas) / total * 100) if total else 0
+
+    return {
+        "total": total,
+        "classificadas": len(classificadas),
+        "percentual": percentual,
+        "faltantes": sorted(set(faltantes)),
     }
