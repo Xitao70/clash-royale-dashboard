@@ -1618,6 +1618,7 @@ st.markdown(
     """
     <div class="subtitle">
         Compare dois jogadores de Clash Royale e seus decks lado a lado.
+        <br><span style="font-size:.72rem; opacity:.55;">UI móvel v2</span>
     </div>
     """,
     unsafe_allow_html=True
