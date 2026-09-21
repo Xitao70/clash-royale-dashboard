@@ -160,6 +160,99 @@ st.markdown(
         margin-bottom: 14px;
     }
 
+
+    .profile-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin: 10px 0 16px 0;
+    }
+
+    .profile-stat {
+        border: 1px solid rgba(128,128,128,0.18);
+        border-radius: 12px;
+        padding: 10px 12px;
+        min-width: 0;
+    }
+
+    .profile-stat-label {
+        font-size: .78rem;
+        opacity: .72;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+
+    .profile-stat-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .profile-details {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin: 8px 0 6px 0;
+    }
+
+    .profile-detail {
+        border: 1px solid rgba(128,128,128,0.16);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .deck-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 10px;
+        align-items: start;
+        margin-top: 10px;
+    }
+
+    .deck-card {
+        text-align: center;
+        min-width: 0;
+    }
+
+    .deck-card a {
+        display: block;
+        text-decoration: none;
+    }
+
+    .deck-card img {
+        width: 100%;
+        max-width: 118px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        border-radius: 10px;
+    }
+
+    .deck-card-name {
+        margin-top: 5px;
+        font-size: .72rem;
+        font-weight: 700;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+
+    .deck-card-level {
+        margin-top: 2px;
+        font-size: .66rem;
+        opacity: .72;
+        line-height: 1.1;
+    }
+
+    .deck-zoom-note {
+        text-align: center;
+        font-size: .72rem;
+        opacity: .62;
+        margin: 8px 0 4px 0;
+    }
+
     @media (max-width: 700px) {
         .block-container {
             padding-left: .8rem;
@@ -197,6 +290,51 @@ st.markdown(
 
         div[data-testid="stMetricValue"] {
             font-size: 1.55rem;
+        }
+
+        .profile-stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .profile-stat {
+            padding: 9px 10px;
+        }
+
+        .profile-stat-label {
+            font-size: .72rem;
+        }
+
+        .profile-stat-value {
+            font-size: 1.25rem;
+        }
+
+        .profile-details {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .profile-detail {
+            font-size: 1.05rem;
+            padding: 10px 12px;
+        }
+
+        .deck-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px 6px;
+        }
+
+        .deck-card img {
+            max-width: 92px;
+            border-radius: 8px;
+        }
+
+        .deck-card-name {
+            font-size: .64rem;
+        }
+
+        .deck-card-level {
+            font-size: .60rem;
         }
     }
 
@@ -1238,17 +1376,17 @@ def numero(valor):
 
 def mostrar_perfil(jogador):
 
-    nome = jogador.get("name", "Jogador")
-    tag = jogador.get("tag", "")
+    nome = html.escape(str(jogador.get("name", "Jogador")))
+    tag = html.escape(str(jogador.get("tag", "")))
     trofeus = jogador.get("trophies", 0)
     melhor = jogador.get("bestTrophies", 0)
-    nivel = jogador.get("expLevel", "-")
+    nivel = html.escape(str(jogador.get("expLevel", "-")))
     wins = jogador.get("wins", 0)
     losses = jogador.get("losses", 0)
     battles = jogador.get("battleCount", 0)
 
-    arena = obter_nome_arena(jogador)
-    cla = obter_nome_cla(jogador)
+    arena = html.escape(str(obter_nome_arena(jogador)))
+    cla = html.escape(str(obter_nome_cla(jogador)))
     winrate = calcular_taxa_vitoria(jogador)
 
     st.markdown(
@@ -1257,25 +1395,42 @@ def mostrar_perfil(jogador):
             <div class="player-name">{nome}</div>
             <div class="player-tag">{tag}</div>
         </div>
+
+        <div class="profile-stats-grid">
+            <div class="profile-stat">
+                <div class="profile-stat-label">🏆 Troféus</div>
+                <div class="profile-stat-value">{numero(trofeus)}</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">⚔️ Vitórias</div>
+                <div class="profile-stat-value">{numero(wins)}</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">🎮 Batalhas</div>
+                <div class="profile-stat-value">{numero(battles)}</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">🏅 Recorde</div>
+                <div class="profile-stat-value">{numero(melhor)}</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">💀 Derrotas</div>
+                <div class="profile-stat-value">{numero(losses)}</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-label">📊 Taxa de vitória</div>
+                <div class="profile-stat-value">{winrate:.1f}%</div>
+            </div>
+        </div>
+
+        <div class="profile-details">
+            <div class="profile-detail">👑 Nível: {nivel}</div>
+            <div class="profile-detail">🏟️ Arena: {arena}</div>
+            <div class="profile-detail">🛡️ Clã: {cla}</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("🏆 Troféus", numero(trofeus))
-        st.metric("⚔️ Vitórias", numero(wins))
-        st.metric("🎮 Batalhas", numero(battles))
-
-    with col2:
-        st.metric("🏅 Recorde", numero(melhor))
-        st.metric("💀 Derrotas", numero(losses))
-        st.metric("📊 Taxa de vitória", f"{winrate:.1f}%")
-
-    st.write(f"👑 **Nível:** {nivel}")
-    st.write(f"🏟️ **Arena:** {arena}")
-    st.write(f"🛡️ **Clã:** {cla}")
 
 
 # ============================================================
@@ -1297,43 +1452,51 @@ def mostrar_deck(jogador):
         unsafe_allow_html=True
     )
 
-    primeira_linha = deck[:4]
-    segunda_linha = deck[4:8]
+    cards_html = []
 
-    for linha in [primeira_linha, segunda_linha]:
+    for carta in deck:
+        imagem = obter_url_imagem(carta)
+        nome = html.escape(str(carta.get("name", "Carta")))
+        nivel = html.escape(str(carta.get("level", "?")))
+        max_level = carta.get("maxLevel")
 
-        cols = st.columns(4)
+        texto_nivel = f"Nível {nivel}"
 
-        for coluna, carta in zip(cols, linha):
+        if max_level:
+            texto_nivel += f" / {html.escape(str(max_level))}"
 
-            with coluna:
+        if imagem:
+            imagem_segura = html.escape(str(imagem), quote=True)
+            imagem_html = (
+                f'<a href="{imagem_segura}" target="_blank" '
+                f'title="Abrir {nome} ampliada">'
+                f'<img src="{imagem_segura}" alt="{nome}" loading="lazy">'
+                f'</a>'
+            )
+        else:
+            imagem_html = '<div style="height:88px;"></div>'
 
-                imagem = obter_url_imagem(carta)
+        cards_html.append(
+            f"""
+            <div class="deck-card">
+                {imagem_html}
+                <div class="deck-card-name">{nome}</div>
+                <div class="deck-card-level">{texto_nivel}</div>
+            </div>
+            """
+        )
 
-                if imagem:
-                    st.image(
-                        imagem,
-                        use_container_width=True
-                    )
-
-                nome = carta.get("name", "Carta")
-                nivel = carta.get("level", "?")
-                max_level = carta.get("maxLevel")
-
-                st.markdown(
-                    f'<div class="card-name">{nome}</div>',
-                    unsafe_allow_html=True
-                )
-
-                texto_nivel = f"Nível {nivel}"
-
-                if max_level:
-                    texto_nivel += f" / {max_level}"
-
-                st.markdown(
-                    f'<div class="card-level">{texto_nivel}</div>',
-                    unsafe_allow_html=True
-                )
+    st.markdown(
+        f"""
+        <div class="deck-grid">
+            {''.join(cards_html)}
+        </div>
+        <div class="deck-zoom-note">
+            🔎 Toque ou clique em uma carta para abrir a imagem ampliada.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.metric(
         "💧 Elixir médio",
