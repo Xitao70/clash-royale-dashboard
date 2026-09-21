@@ -21,6 +21,29 @@ st.set_page_config(
 
 
 # ============================================================
+# NAVEGAÇÃO PRINCIPAL
+# ============================================================
+
+st.markdown(
+    """
+    <div style="display:flex; gap:12px; margin: 4px 0 18px 0;">
+        <a href="/" target="_self"
+           style="text-decoration:none; padding:10px 16px; border-radius:10px;
+                  border:1px solid rgba(128,128,128,.35); font-weight:700;">
+            👑 Dashboard
+        </a>
+        <a href="/2_%E2%9A%94%EF%B8%8F_Jogador_vs_Jogador" target="_self"
+           style="text-decoration:none; padding:10px 16px; border-radius:10px;
+                  border:1px solid rgba(128,128,128,.35); font-weight:700;">
+            ⚔️ Jogador vs Jogador
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
 # CONFIGURAÇÃO DO PROXY
 # ============================================================
 
