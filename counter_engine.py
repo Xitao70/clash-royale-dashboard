@@ -279,3 +279,56 @@ def respostas_para_ameaca(deck_defensor, nome_ameaca):
         unicos.append(item)
 
     return unicos
+
+
+def identificar_vulnerabilidades(deck_defensor, deck_atacante, limite_ameacas=5):
+    """
+    Identifica ameaças ofensivas do adversário para as quais o deck defensor
+    tem poucas ou nenhuma resposta natural mapeada.
+
+    Retorna uma lista ordenada por gravidade heurística:
+    - 0 respostas: vulnerabilidade alta
+    - 1 resposta: vulnerabilidade moderada
+    - 2+ respostas: não entra na lista principal
+    """
+
+    ameacas = classificar_ameacas(deck_atacante)[:limite_ameacas]
+    vulnerabilidades = []
+
+    for ameaca in ameacas:
+        respostas = respostas_para_ameaca(
+            deck_defensor,
+            ameaca["name"]
+        )
+
+        qtd = len(respostas)
+
+        if qtd >= 2:
+            continue
+
+        if qtd == 0:
+            nivel = "alta"
+            gravidade = 2
+        else:
+            nivel = "moderada"
+            gravidade = 1
+
+        vulnerabilidades.append(
+            {
+                "threat": ameaca["name"],
+                "threat_score": ameaca["score"],
+                "responses": respostas,
+                "response_count": qtd,
+                "level": nivel,
+                "severity": gravidade,
+            }
+        )
+
+    return sorted(
+        vulnerabilidades,
+        key=lambda item: (
+            -item["severity"],
+            -item["threat_score"],
+            item["threat"]
+        )
+    )
