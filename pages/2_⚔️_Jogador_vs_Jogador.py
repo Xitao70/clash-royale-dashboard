@@ -456,6 +456,247 @@ A próxima etapa será usar essas funções para montar regras de interação, p
         )
 
 
+def gerar_orientacoes_estrategicas(deck_proprio, deck_adversario, nome_adversario):
+    """
+    Gera orientações curtas a partir das heurísticas já existentes.
+    Não prevê resultado de partida e não substitui leitura de ciclo/timing.
+    """
+
+    orientacoes = []
+
+    vulnerabilidades = identificar_vulnerabilidades(
+        deck_proprio,
+        deck_adversario
+    )
+
+    roles_proprio = resumo_de_roles(deck_proprio)["contagem"]
+    roles_adversario = resumo_de_roles(deck_adversario)["contagem"]
+
+    analise_propria = analisar_deck(deck_proprio)
+    analise_adversaria = analisar_deck(deck_adversario)
+
+    # 1) Vulnerabilidades altas e moderadas
+    for item in vulnerabilidades:
+        if item["level"] == "alta":
+            orientacoes.append(
+                {
+                    "tipo": "erro",
+                    "titulo": f"Priorize {item['threat']}",
+                    "texto": (
+                        "A base atual não encontrou uma resposta natural no seu deck "
+                        f"para {item['threat']} de {nome_adversario}."
+                    ),
+                }
+            )
+
+        elif item["responses"]:
+            resposta = item["responses"][0]
+            orientacoes.append(
+                {
+                    "tipo": "aviso",
+                    "titulo": f"Preserve {resposta['defender']}",
+                    "texto": (
+                        f"Ela é a única resposta natural mapeada contra "
+                        f"{item['threat']} neste confronto."
+                    ),
+                }
+            )
+
+    # 2) Cobertura aérea
+    anti_air = roles_proprio.get("anti_air", 0)
+    air_adv = roles_adversario.get("air", 0)
+
+    if air_adv > 0 and anti_air <= 1:
+        orientacoes.append(
+            {
+                "tipo": "aviso",
+                "titulo": "Cobertura aérea curta",
+                "texto": (
+                    f"O adversário tem {air_adv} carta(s) aérea(s) classificada(s), "
+                    f"enquanto seu deck tem {anti_air} resposta(s) anti-aérea(s) mapeada(s)."
+                ),
+            }
+        )
+
+    # 3) Enxames
+    swarm_adv = roles_adversario.get("swarm", 0)
+    resposta_swarm = (
+        roles_proprio.get("splash", 0)
+        + roles_proprio.get("small_spell", 0)
+    )
+
+    if swarm_adv > 0 and resposta_swarm <= 1:
+        orientacoes.append(
+            {
+                "tipo": "aviso",
+                "titulo": "Pouca cobertura contra enxames",
+                "texto": (
+                    f"{nome_adversario} tem {swarm_adv} carta(s) de enxame classificada(s) "
+                    "e seu deck possui poucas respostas de splash/feitiço leve."
+                ),
+            }
+        )
+
+    # 4) Tanques
+    tanks_adv = roles_adversario.get("tank", 0)
+    tank_killers = roles_proprio.get("tank_killer", 0)
+
+    if tanks_adv > 0 and tank_killers == 0:
+        orientacoes.append(
+            {
+                "tipo": "aviso",
+                "titulo": "Sem mata-tanque dedicado",
+                "texto": (
+                    f"{nome_adversario} possui {tanks_adv} tanque(s) classificado(s) "
+                    "e seu deck não tem mata-tanque mapeado."
+                ),
+            }
+        )
+
+    # 5) Ciclo / rotação
+    diferenca_ciclo = (
+        analise_adversaria["ciclo_4"]
+        - analise_propria["ciclo_4"]
+    )
+
+    if diferenca_ciclo >= 2:
+        orientacoes.append(
+            {
+                "tipo": "info",
+                "titulo": "Rotação estrutural mais barata",
+                "texto": (
+                    f"Suas 4 cartas mais baratas somam {analise_propria['ciclo_4']:.0f} "
+                    f"de elixir contra {analise_adversaria['ciclo_4']:.0f} do adversário."
+                ),
+            }
+        )
+    elif diferenca_ciclo <= -2:
+        orientacoes.append(
+            {
+                "tipo": "info",
+                "titulo": "Adversário tem rotação estrutural mais barata",
+                "texto": (
+                    f"As 4 cartas mais baratas de {nome_adversario} somam "
+                    f"{analise_adversaria['ciclo_4']:.0f} de elixir contra "
+                    f"{analise_propria['ciclo_4']:.0f} do seu deck."
+                ),
+            }
+        )
+
+    # Remove duplicações de títulos e limita o resumo.
+    unicas = []
+    titulos = set()
+
+    prioridade = {
+        "erro": 0,
+        "aviso": 1,
+        "info": 2,
+    }
+
+    for item in sorted(
+        orientacoes,
+        key=lambda x: prioridade.get(x["tipo"], 9)
+    ):
+        if item["titulo"] in titulos:
+            continue
+
+        titulos.add(item["titulo"])
+        unicas.append(item)
+
+    if not unicas:
+        unicas.append(
+            {
+                "tipo": "sucesso",
+                "titulo": "Sem alerta estrutural relevante",
+                "texto": (
+                    "Com a base atual, não apareceu uma vulnerabilidade forte o bastante "
+                    "para virar orientação prioritária."
+                ),
+            }
+        )
+
+    return unicas[:4]
+
+
+def mostrar_resumo_estrategico(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    orientacoes1 = gerar_orientacoes_estrategicas(
+        deck1,
+        deck2,
+        nome2
+    )
+
+    orientacoes2 = gerar_orientacoes_estrategicas(
+        deck2,
+        deck1,
+        nome1
+    )
+
+    st.markdown(
+        '<div class="comparison-title">🧭 Resumo Estratégico do Confronto</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Síntese prática das análises estruturais do matchup. "
+        "Não é previsão de vitória."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"### {nome1}")
+
+        for item in orientacoes1:
+            mensagem = f"**{item['titulo']}** — {item['texto']}"
+
+            if item["tipo"] == "erro":
+                st.error(mensagem)
+            elif item["tipo"] == "aviso":
+                st.warning(mensagem)
+            elif item["tipo"] == "sucesso":
+                st.success(mensagem)
+            else:
+                st.info(mensagem)
+
+    with col2:
+        st.markdown(f"### {nome2}")
+
+        for item in orientacoes2:
+            mensagem = f"**{item['titulo']}** — {item['texto']}"
+
+            if item["tipo"] == "erro":
+                st.error(mensagem)
+            elif item["tipo"] == "aviso":
+                st.warning(mensagem)
+            elif item["tipo"] == "sucesso":
+                st.success(mensagem)
+            else:
+                st.info(mensagem)
+
+    with st.expander("ℹ️ Como este resumo é montado?"):
+        st.markdown(
+            """
+O resumo combina as regras que já existem no app:
+
+- vulnerabilidades sem resposta ou com resposta única;
+- cobertura anti-aérea;
+- cobertura contra enxames;
+- presença de mata-tanque;
+- custo estrutural das quatro cartas mais baratas.
+
+As frases são geradas por **regras determinísticas**, não por um modelo que inventa
+conselhos livremente. Conforme ampliarmos a base de cartas e interações, o resumo
+também ficará mais preciso.
+            """
+        )
+
+
 def mostrar_vulnerabilidades_matchup(j1, j2):
     deck1 = j1.get("currentDeck", [])
     deck2 = j2.get("currentDeck", [])
@@ -1192,6 +1433,13 @@ if comparar:
     with aba_comparacao:
 
         mostrar_comparacao(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_resumo_estrategico(
             jogador1,
             jogador2
         )
