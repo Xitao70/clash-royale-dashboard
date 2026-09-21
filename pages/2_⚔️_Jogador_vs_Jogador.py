@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 
 from card_roles import ROLE_LABELS, resumo_de_roles
+from counter_engine import cobertura_respostas
 
 
 # ============================================================
@@ -451,6 +452,88 @@ isso em vez de adivinhar.
 A próxima etapa será usar essas funções para montar regras de interação, por exemplo:
 **anti-aéreo vs unidade aérea**, **small spell vs swarm**, **reset vs inferno** e
 **building vs building-target**, formando a base do analisador de counters.
+            """
+        )
+
+
+def mostrar_respostas_naturais(j1, j2):
+    deck1 = j1.get("currentDeck", [])
+    deck2 = j2.get("currentDeck", [])
+
+    nome1 = j1.get("name", "Jogador 1")
+    nome2 = j2.get("name", "Jogador 2")
+
+    cobertura1 = cobertura_respostas(deck1, deck2)
+    cobertura2 = cobertura_respostas(deck2, deck1)
+
+    st.markdown(
+        '<div class="comparison-title">🛡️ Respostas Naturais</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(
+        "Heurística inicial baseada nas funções das cartas. "
+        "Não representa counter garantido nem previsão de vitória."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"### {nome1}")
+        st.metric(
+            "Ameaças adversárias cobertas",
+            f"{cobertura1['cobertas']}/{cobertura1['total']}"
+        )
+        st.progress(min(cobertura1["percentual"] / 100, 1.0))
+
+        if cobertura1["detalhes"]:
+            for item in cobertura1["detalhes"]:
+                st.markdown(f"**Contra {item['attacker']}**")
+
+                for resposta in item["responses"][:3]:
+                    st.write(
+                        f"• {resposta['defender']} — {resposta['label']}"
+                    )
+        else:
+            st.caption(
+                "Nenhuma interação foi identificada com a base atual."
+            )
+
+    with col2:
+        st.markdown(f"### {nome2}")
+        st.metric(
+            "Ameaças adversárias cobertas",
+            f"{cobertura2['cobertas']}/{cobertura2['total']}"
+        )
+        st.progress(min(cobertura2["percentual"] / 100, 1.0))
+
+        if cobertura2["detalhes"]:
+            for item in cobertura2["detalhes"]:
+                st.markdown(f"**Contra {item['attacker']}**")
+
+                for resposta in item["responses"][:3]:
+                    st.write(
+                        f"• {resposta['defender']} — {resposta['label']}"
+                    )
+        else:
+            st.caption(
+                "Nenhuma interação foi identificada com a base atual."
+            )
+
+    with st.expander("ℹ️ Limitações desta análise"):
+        st.markdown(
+            """
+As regras desta versão consideram apenas funções gerais, como:
+
+- anti-aéreo × unidade aérea;
+- feitiço leve ou splash × enxame;
+- mata-tanque × tanque;
+- construção × unidade focada em construções;
+- reset × mecânica Inferno.
+
+O resultado real também depende de **nível, evolução, posicionamento, timing,
+suporte de outras cartas, torre e habilidade do jogador**. Por isso esta seção
+usa o termo **resposta natural**, e não "counter garantido".
             """
         )
 
@@ -944,6 +1027,13 @@ if comparar:
         st.divider()
 
         mostrar_funcoes_decks(
+            jogador1,
+            jogador2
+        )
+
+        st.divider()
+
+        mostrar_respostas_naturais(
             jogador1,
             jogador2
         )
