@@ -1470,7 +1470,7 @@ def mostrar_deck(jogador):
             imagem_html = (
                 f'<a href="{imagem_segura}" target="_blank" '
                 f'title="Abrir {nome} ampliada">'
-                f'<img src="{imagem_segura}" alt="{nome}" loading="lazy">'
+                f'<img src="{imagem_segura}" alt="{nome}">'
                 f'</a>'
             )
         else:
@@ -1486,7 +1486,7 @@ def mostrar_deck(jogador):
             """
         )
 
-    st.markdown(
+    st.html(
         f"""
         <div class="deck-grid">
             {''.join(cards_html)}
@@ -1494,8 +1494,7 @@ def mostrar_deck(jogador):
         <div class="deck-zoom-note">
             🔎 Toque ou clique em uma carta para abrir a imagem ampliada.
         </div>
-        """,
-        unsafe_allow_html=True
+        """
     )
 
     st.metric(
