@@ -28,16 +28,16 @@ https://github.com/Xitao70/clash-royale-dashboard.git
    ```bash
    pip install -r requirements.txt
    ```
-5. Crie a pasta `.streamlit` na raiz do projeto e, dentro dela, o arquivo `secrets.toml`:
+4. Crie a pasta `.streamlit` na raiz do projeto e, dentro dela, o arquivo `secrets.toml`:
    ```toml
    PROXY_API_URL = "endereco-do-proxy"
    PROXY_SECRET = "seu-token-de-acesso"
    ```
-6. No terminal, rode:
+5. No terminal, rode:
    ```bash
    streamlit run app.py
    ```
-7. O navegador abre automaticamente em `localhost:8501`.
+6. O navegador abre automaticamente em `localhost:8501`.
 
 ## ![bug](https://www.readmecodegen.com/api/social-icon?name=bug&size=32&color=%23ef4444) Checklist de Erros Solucionados
 
